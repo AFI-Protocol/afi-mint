@@ -1,0 +1,1 @@
+// Placeholder for mint event trigger to LayerZero-compatible OFT contract.
