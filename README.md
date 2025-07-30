@@ -63,4 +63,3 @@ for deterministic audit trails and autonomous treasury management.
 ## 📜 License
 
 MIT © 2025 Agentic Financial Intelligence
->>>>>>> 58e78aa (Fix: Restore correct AFI-Mint README and remove accidental ElizaOS content)
