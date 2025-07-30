@@ -1,3 +1,3 @@
-# AFI Minting Pipeline
+# AFI Mint
 
-Signal validation and minting system including final threshold checks and challenge periods.
+Handles AFI token minting based on signal validation, threshold logic, and challenge windows.

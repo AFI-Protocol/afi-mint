@@ -1,0 +1,1 @@
+// CLI hook for triggering a mint event

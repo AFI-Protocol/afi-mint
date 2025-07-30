@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "MintReceipt",
+  "type": "object",
+  "properties": {
+    "signal_id": { "type": "string" },
+    "score": { "type": "number" },
+    "mint_amount": { "type": "number" },
+    "validator_id": { "type": "string" },
+    "challenge_status": { "type": "string" },
+    "timestamp": { "type": "string", "format": "date-time" }
+  },
+  "required": ["signal_id", "score", "mint_amount", "validator_id", "challenge_status", "timestamp"]
+}
