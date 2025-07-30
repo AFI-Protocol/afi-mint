@@ -1,0 +1,1 @@
+// CLI hook for submitting a challenge
