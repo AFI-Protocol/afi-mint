@@ -4,8 +4,9 @@
   "description": "AFI minting service for PoI/PoInsight rewards",
   "type": "module",
   "scripts": {
-    "build": "echo 'Build script TBD'",
-    "test": "echo 'Test script TBD'"
+    "build": "echo \"Build script TBD\"",
+    "test": "echo \"Test script TBD\"",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": ["afi", "mint", "poi", "poinsight", "rewards"],
   "repository": {
