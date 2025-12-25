@@ -1,1 +1,1 @@
-// Placeholder for mint event trigger to LayerZero-compatible OFT contract.
+// Placeholder for mint event trigger to xERC20-compatible cross-chain contract.
