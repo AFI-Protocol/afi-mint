@@ -1,18 +1,64 @@
 {
-  "name": "afi-mint",
+  "name": "@afi-protocol/afi-mint",
   "version": "1.0.0",
-  "description": "AFI minting service for PoI/PoInsight rewards",
+  "description": "AFI signal validation and token minting coordination",
   "type": "module",
-  "scripts": {
-    "build": "echo \"Build script TBD\"",
-    "test": "echo \"Test script TBD\"",
-    "typecheck": "tsc --noEmit"
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./orchestrator": {
+      "types": "./dist/src/orchestrator/index.d.ts",
+      "import": "./dist/src/orchestrator/index.js"
+    },
+    "./snapshot": {
+      "types": "./dist/src/snapshot/index.d.ts",
+      "import": "./dist/src/snapshot/index.js"
+    },
+    "./schemas": {
+      "types": "./dist/schemas/index.d.ts",
+      "import": "./dist/schemas/index.js"
+    }
   },
-  "keywords": ["afi", "mint", "poi", "poinsight", "rewards"],
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/ schemas/ mint/"
+  },
+  "keywords": ["afi", "mint", "validator", "snapshot", "governance", "token"],
   "repository": {
     "type": "git",
     "url": "https://github.com/AFI-Protocol/afi-mint.git"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.3.0",
+    "vitest": "^1.0.0"
+  },
+  "peerDependencies": {
+    "@afi-protocol/afi-core": "^1.0.0",
+    "@afi-protocol/afi-infra": "^1.0.0",
+    "ethers": "^6.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@afi-protocol/afi-core": {
+      "optional": true
+    },
+    "@afi-protocol/afi-infra": {
+      "optional": true
+    },
+    "ethers": {
+      "optional": true
+    }
+  }
 }
 
