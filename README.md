@@ -62,4 +62,4 @@ for deterministic audit trails and autonomous treasury management.
 
 ## 📜 License
 
-MIT © 2025 Agentic Financial Intelligence
+MIT © 2025 AFI Research Institute
