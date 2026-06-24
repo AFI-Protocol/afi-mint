@@ -208,7 +208,7 @@ export const DEFAULT_VALIDATOR_CONFIG: ValidatorConfig = {
   // Dispute resolution
   challengeSuccessThreshold: 0.66, // 66% to overturn decision
   minDisputeQuorumThreshold: 0.1, // 10% participation
-  snapshotSpaceId: 'afi.eth',
+  snapshotSpaceId: 'afidao.eth',
   
   // Challenge economics
   minChallengeStake: '100000000000000000000', // 100 tokens (18 decimals)
