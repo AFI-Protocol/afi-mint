@@ -1,0 +1,27 @@
+{
+  "_meta": {
+    "description": "Golden vectors vendored from afi-math tests/goldens/emissions.golden.json at f20c0dd28bec12bf793ce5dcadaafa42744d6280 (PR-1). Integer values must match exactly; floats at relative tolerance 1e-12.",
+    "source": "afi-math@f20c0dd28bec12bf793ce5dcadaafa42744d6280"
+  },
+  "defaultSchedule": {
+    "totalEpochs": 2756,
+    "milestones": {
+      "epochTo33Pct": 208,
+      "epochTo80Pct": 1456,
+      "epochTo100Pct": 2756,
+      "yearsTo33Pct": 4,
+      "yearsTo80Pct": 28,
+      "yearsTo100Pct": 53
+    },
+    "emissionsAtEpochs": {
+      "1": 318302207.36608756,
+      "2": 315241632.9128252,
+      "208": 43077519.38872849,
+      "209": 62082710.67822865,
+      "1456": 13852525.176081793,
+      "1457": 22718029.52393052,
+      "2756": 6842538.9986583935
+    },
+    "sumOfEmissions": 85999999999.99997
+  }
+}

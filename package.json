@@ -37,6 +37,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@afi-protocol/afi-math": "github:AFI-Protocol/afi-math#f20c0dd28bec12bf793ce5dcadaafa42744d6280",
     "zod": "^3.22.0"
   },
   "devDependencies": {

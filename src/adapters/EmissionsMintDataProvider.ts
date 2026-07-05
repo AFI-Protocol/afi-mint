@@ -1,143 +1,21 @@
 /**
  * Emissions-Based Mint Data Provider
- * 
+ *
  * Implements IMintDataProvider using the canonical AFI emissions schedule.
  * Calculates per-signal token amounts based on:
  * - Epoch emissions budget (from three-phase front-loaded schedule)
  * - Signal quality scores (decay score, novelty, reputation)
  * - Proportional distribution among qualified signals in the epoch
- * 
+ *
  * Based on the goldpaper formula:
  * ΔAFIᵢ = clamp(B(t) × Qᵢ × Nᵢ × R_val,i × E_epoch, 0.5×B(t), 2.0×B(t))
  */
 
+import { emissions, type EmissionsParams, type EmissionsSchedule } from '@afi-protocol/afi-math';
 import type { IMintDataProvider } from '../orchestrator/MintExecutor.js';
 import type { SignalValidatorState } from '../orchestrator/types.js';
 
-// ============================================================================
-// Emissions Schedule Types and Functions
-// Inlined from afi-math to avoid circular dependency issues.
-// Canonical source: afi-math/src/emissions/emissionsSchedule.ts
-// ============================================================================
-
-export interface EmissionsParams {
-  cap: bigint;
-  epochsPerYear: number;
-  earlyYears: number;
-  midYears: number;
-  tailYears: number;
-  targets: { f33: number; f80: number; f100: number };
-  shapeEarly: number;
-  shapeMid: number;
-  shapeTail: number;
-}
-
-export interface EmissionsSchedule {
-  params: EmissionsParams;
-  totalEpochs: number;
-  emissions: number[];
-  cumulative: number[];
-  milestones: {
-    epochTo33Pct: number;
-    epochTo80Pct: number;
-    epochTo100Pct: number;
-    yearsTo33Pct: number;
-    yearsTo80Pct: number;
-    yearsTo100Pct: number;
-  };
-}
-
-const DEFAULT_EMISSIONS_PARAMS: EmissionsParams = {
-  cap: 86_000_000_000n,
-  epochsPerYear: 52,
-  earlyYears: 4,
-  midYears: 24,
-  tailYears: 25,
-  targets: { f33: 1 / 3, f80: 0.8, f100: 1.0 },
-  shapeEarly: 2.0,
-  shapeMid: 1.5,
-  shapeTail: 1.2,
-};
-
-function shapeWeights(n: number, shape: number): number[] {
-  if (n <= 0) return [];
-  if (n === 1) return [1.0];
-  const weights: number[] = [];
-  const denominator = Math.max(1, n - 1);
-  for (let i = 0; i < n; i++) {
-    weights.push(Math.exp(-shape * (i / denominator)));
-  }
-  const total = weights.reduce((sum, w) => sum + w, 0);
-  return weights.map(w => w / total);
-}
-
-function toEpochs(years: number, epochsPerYear: number): number {
-  return Math.max(1, Math.round(years * epochsPerYear));
-}
-
-function buildEmissionsSchedule(params: Partial<EmissionsParams> = {}): EmissionsSchedule {
-  const p: EmissionsParams = { ...DEFAULT_EMISSIONS_PARAMS, ...params };
-  const cap = Number(p.cap);
-  const nEarly = toEpochs(p.earlyYears, p.epochsPerYear);
-  const nMid = toEpochs(p.midYears, p.epochsPerYear);
-  const nTail = toEpochs(p.tailYears, p.epochsPerYear);
-  const totalEpochs = nEarly + nMid + nTail;
-
-  const wEarly = shapeWeights(nEarly, p.shapeEarly);
-  const wMid = shapeWeights(nMid, p.shapeMid);
-  const wTail = shapeWeights(nTail, p.shapeTail);
-
-  const supplyEarly = cap * p.targets.f33;
-  const supplyMid = cap * (p.targets.f80 - p.targets.f33);
-  const supplyTail = cap * (p.targets.f100 - p.targets.f80);
-
-  const baseEmissions: number[] = [
-    ...wEarly.map(w => w * supplyEarly),
-    ...wMid.map(w => w * supplyMid),
-    ...wTail.map(w => w * supplyTail),
-  ];
-
-  const baseTotal = baseEmissions.reduce((sum, e) => sum + e, 0);
-  const scale = cap / baseTotal;
-  const emissions = baseEmissions.map(e => e * scale);
-
-  const cumulative: number[] = [];
-  let runningTotal = 0;
-  for (const e of emissions) {
-    runningTotal += e;
-    cumulative.push(runningTotal);
-  }
-
-  const findMilestoneEpoch = (targetFraction: number): number => {
-    const target = cap * targetFraction;
-    const idx = cumulative.findIndex(c => c >= target);
-    return idx >= 0 ? idx + 1 : totalEpochs;
-  };
-
-  return {
-    params: p,
-    totalEpochs,
-    emissions,
-    cumulative,
-    milestones: {
-      epochTo33Pct: findMilestoneEpoch(p.targets.f33),
-      epochTo80Pct: findMilestoneEpoch(p.targets.f80),
-      epochTo100Pct: findMilestoneEpoch(p.targets.f100),
-      yearsTo33Pct: findMilestoneEpoch(p.targets.f33) / p.epochsPerYear,
-      yearsTo80Pct: findMilestoneEpoch(p.targets.f80) / p.epochsPerYear,
-      yearsTo100Pct: findMilestoneEpoch(p.targets.f100) / p.epochsPerYear,
-    },
-  };
-}
-
-function getEpochEmission(schedule: EmissionsSchedule, epoch: number): number {
-  if (epoch < 1 || epoch > schedule.totalEpochs) return 0;
-  return schedule.emissions[epoch - 1];
-}
-
-// ============================================================================
-// End of inlined emissions schedule code
-// ============================================================================
+export type { EmissionsParams, EmissionsSchedule };
 
 /**
  * Signal metadata required for token calculation.
@@ -205,7 +83,7 @@ const DEFAULT_CONFIG: EmissionsMintConfig = {
 
 /**
  * Emissions-based mint data provider.
- * 
+ *
  * Calculates token amounts using the canonical emissions schedule and
  * goldpaper mint formula.
  */
@@ -219,7 +97,7 @@ export class EmissionsMintDataProvider implements IMintDataProvider {
     config: Partial<EmissionsMintConfig> = {}
   ) {
     this.config = { ...DEFAULT_CONFIG, ...config };
-    this.schedule = buildEmissionsSchedule(this.config.emissionsParams);
+    this.schedule = emissions.buildEmissionsSchedule(this.config.emissionsParams);
   }
 
   /**
@@ -235,9 +113,9 @@ export class EmissionsMintDataProvider implements IMintDataProvider {
 
   /**
    * Calculate token amount for a signal using the goldpaper formula.
-   * 
+   *
    * Formula: ΔAFIᵢ = clamp(B(t) × Qᵢ × Nᵢ × R_val,i × E_epoch, min, max)
-   * 
+   *
    * Where:
    * - B(t) = base multiplier (decays conceptually but we use epoch budget)
    * - Qᵢ = quality score (from decay score, 0-1)
@@ -252,7 +130,7 @@ export class EmissionsMintDataProvider implements IMintDataProvider {
     }
 
     // Get epoch emissions budget
-    const epochBudget = getEpochEmission(this.schedule, metadata.epoch);
+    const epochBudget = emissions.getEpochEmission(this.schedule, metadata.epoch);
     if (epochBudget <= 0) {
       return 0n; // Past end of schedule or invalid epoch
     }
@@ -335,7 +213,7 @@ export class EmissionsMintDataProvider implements IMintDataProvider {
    * Get emissions budget for a specific epoch.
    */
   getEpochBudget(epoch: number): number {
-    return getEpochEmission(this.schedule, epoch);
+    return emissions.getEpochEmission(this.schedule, epoch);
   }
 }
 
