@@ -8,17 +8,18 @@ import {
 import type { SignalValidatorState } from '../src/orchestrator/types.js';
 
 /**
- * Fixture outputs captured from the pre-PR-3 inline emissions implementation
- * (bit-identical to afi-math f20c0dd). Preserves calculateTokenAmount behavior.
+ * Fixture outputs under the deterministic tokenUnitsToBaseUnits conversion policy.
+ * Values marked "updated PR-4" differ from pre-PR-4 Math.floor(float×10^decimals)
+ * artifacts only; mint formula and payout structure are unchanged.
  */
 const BASELINE_FIXTURES = {
   invalidEpoch: 0n,
   singleDefaultMax: 1_000_000_000_000_000_000_000_000n,
-  multiA: 2_280_846_332_886_130_960_105_472n,
-  multiB: 4_561_692_665_772_261_920_210_944n,
+  multiA: 2_280_846_332_886_131_000_000_000n, // updated PR-4
+  multiB: 4_561_692_665_772_262_000_000_000n, // updated PR-4
   exhausted: 1_000_000_000_000_000_000n,
-  pulse: 10_263_808_497_987_590_259_998_720n,
-  noPulse: 6_842_538_998_658_393_148_751_872n,
+  pulse: 10_263_808_497_987_590_000_000_000n, // updated PR-4
+  noPulse: 6_842_538_998_658_393_500_000_000n, // updated PR-4
 } as const;
 
 const HIGH_MAX_CONFIG = {
