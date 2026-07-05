@@ -12,6 +12,7 @@
  */
 
 import { emissions, type EmissionsParams, type EmissionsSchedule } from '@afi-protocol/afi-math';
+import { tokenUnitsToBaseUnits } from '../mint/tokenUnits.js';
 import type { IMintDataProvider } from '../orchestrator/MintExecutor.js';
 import type { SignalValidatorState } from '../orchestrator/types.js';
 
@@ -158,8 +159,8 @@ export class EmissionsMintDataProvider implements IMintDataProvider {
     // Apply epoch pulse factor
     const adjustedAmount = baseAmount * this.config.epochPulseFactor;
 
-    // Convert to wei (bigint with decimals)
-    const amountWei = BigInt(Math.floor(adjustedAmount * 10 ** this.config.decimals));
+    // Convert to base units (deterministic decimal truncation at settlement boundary)
+    const amountWei = tokenUnitsToBaseUnits(adjustedAmount, this.config.decimals);
 
     // Clamp to min/max
     return this.clampAmount(amountWei);
