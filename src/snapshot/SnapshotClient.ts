@@ -79,6 +79,17 @@ export const DEFAULT_SNAPSHOT_CONFIG: SnapshotClientConfig = {
   sequencerUrl: 'https://seq.snapshot.org'
 };
 
+interface SnapshotGraphQLResponseBody<T> {
+  data?: T;
+  errors?: ReadonlyArray<Record<string, unknown>>;
+}
+
+interface SnapshotSequencerResponseBody {
+  id?: string;
+  error?: string;
+  error_description?: string;
+}
+
 /**
  * Snapshot GraphQL query for proposals.
  */
@@ -156,12 +167,12 @@ export class SnapshotClient {
       throw new Error(`Snapshot API error: ${response.status} ${response.statusText}`);
     }
 
-    const json = await response.json();
+    const json = (await response.json()) as SnapshotGraphQLResponseBody<T>;
     if (json.errors) {
       throw new Error(`Snapshot GraphQL error: ${JSON.stringify(json.errors)}`);
     }
 
-    return json.data;
+    return json.data as T;
   }
 
   /**
@@ -288,12 +299,12 @@ export class SnapshotClient {
       throw new Error(`Failed to create proposal: ${response.status} - ${text}`);
     }
 
-    const result = await response.json();
+    const result = (await response.json()) as SnapshotSequencerResponseBody;
     if (result.error) {
       throw new Error(`Snapshot error: ${result.error_description || result.error}`);
     }
 
-    return result.id;
+    return result.id as string;
   }
 
   /**
