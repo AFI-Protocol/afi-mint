@@ -73,7 +73,7 @@ npm run validate:receipts
 - `test/` — Unit tests for minting flows
 
 **Depends on**: afi-core (validators, schemas), afi-config (global config)  
-**Consumed by**: afi-ops (deployment), afi-reactor (signal pipeline), afi-token (on-chain minting)
+**Consumed by**: afi-reactor (signal pipeline), afi-token (on-chain minting)
 
 **Boundary with afi-token**:
 - `afi-mint` = minting **coordination** (off-chain logic, threshold checks, challenge windows)
@@ -128,7 +128,7 @@ npm run validate:receipts
 **Forbidden**:
 - **Modify token contracts in `afi-token`** (minting execution is separate from coordination)
 - **Change supply caps, emissions rates, or token economics** (those belong to `afi-token` only)
-- **Deploy contracts or broadcast transactions** (deployment is handled by `afi-ops` and `afi-token`)
+- **Deploy contracts or broadcast transactions** (deployment is handled by `afi-token`)
 - **Add orchestration logic to `afi-reactor`** (signal orchestration is separate from minting coordination)
 - **Modify DAG structure or signal scoring** (those belong to `afi-reactor` and `afi-core`)
 - **Bypass challenge windows or threshold checks** (security-critical)
