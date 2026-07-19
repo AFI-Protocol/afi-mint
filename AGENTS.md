@@ -62,7 +62,7 @@ npm run validate:receipts
 
 ## Architecture Overview
 
-**Purpose**: Coordinate signal-driven minting and emissions scheduling. **Not** for token contracts, on-chain economics, or DAG orchestration.
+**Purpose**: Coordinate signal-driven minting and emissions scheduling. **Not** for token contracts, on-chain economics, or pipeline orchestration.
 
 **Key directories**:
 - `mint/` — Core minting coordination logic (eligibility, mint triggers)
@@ -80,7 +80,7 @@ npm run validate:receipts
 - `afi-token` = minting **execution** (on-chain contracts, supply caps, role management)
 
 **Boundary with afi-reactor**:
-- `afi-reactor` = signal **orchestration** (DAG pipeline, signal scoring)
+- `afi-reactor` = signal **orchestration** (manifest-driven pipeline, signal scoring)
 - `afi-mint` = signal **consumption** (threshold checks, mint triggers based on scored signals)
 
 ---
@@ -146,7 +146,7 @@ npm run validate:receipts
 - `afi-mint` **MUST NOT** modify token contracts, supply caps, or role management
 - Dependency direction: `afi-mint` → `afi-token` (never reverse)
 
-**afi-reactor** (DAG orchestration):
+**afi-reactor** (pipeline orchestration):
 - `afi-mint` **consumes** scored signals from `afi-reactor`
 - `afi-mint` **MUST NOT** modify DAG structure or signal scoring logic
 - Dependency direction: `afi-mint` → `afi-reactor` (never reverse)
