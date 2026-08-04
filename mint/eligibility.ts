@@ -5,7 +5,7 @@
  * These are lightweight helpers; full validation is in orchestrator.
  */
 
-import type { SignalValidatorState, ValidatorConfig } from '../src/orchestrator/types.js';
+import type { SignalValidatorState } from '../src/orchestrator/types.js';
 import { DEFAULT_VALIDATOR_CONFIG } from '../src/orchestrator/types.js';
 
 /**
@@ -30,35 +30,13 @@ export function passesDecayThreshold(
 }
 
 /**
- * Check if a challenge vote passes thresholds.
- */
-export function passesChallengeThresholds(
-  approvalPercentage: number,
-  quorum: number,
-  config: Partial<ValidatorConfig> = {}
-): boolean {
-  const thresholds = { ...DEFAULT_VALIDATOR_CONFIG, ...config };
-  return (
-    approvalPercentage >= thresholds.challengeSuccessThreshold &&
-    quorum >= thresholds.minDisputeQuorumThreshold
-  );
-}
-
-/**
  * Check if a signal is ready for minting.
  */
 export function isReadyForMint(state: SignalValidatorState): boolean {
   return (
-    (state.state === 'finalized' || state.state === 'dispute_resolved') &&
+    state.state === 'finalized' &&
     state.finalDecision === 'mint'
   );
-}
-
-/**
- * Check if a signal can be challenged.
- */
-export function canBeChalllenged(state: SignalValidatorState): boolean {
-  return state.state === 'challenge_window' && !state.wasChallenged;
 }
 
 /**

@@ -4,7 +4,7 @@
  * Signal validation and token minting coordination.
  * 
  * This module provides:
- * - Orchestrator: Signal state management, decay evaluation, challenge windows, mint gating
+ * - Orchestrator: Signal state management, decay evaluation, mint gating
  * - Snapshot: Governance proposal creation and vote tracking
  * 
  * Usage:

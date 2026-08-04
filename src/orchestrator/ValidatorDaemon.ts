@@ -1,19 +1,15 @@
 /**
  * Validator Daemon
  * 
- * Main orchestrator for the appeal-based signal validation pipeline.
+ * Main orchestrator for the signal validation pipeline.
  * 
  * DESIGN:
  * 1. Process pending signals → Make automatic validator decisions
- * 2. Open challenge windows for decided signals
- * 3. Finalize unchallenged signals when windows close
- * 4. Process disputed signals after voting completes
- * 5. Execute minting for approved signals
+ * 2. Finalize decided signals (CHR-GOV D-CHR-2(3))
+ * 3. Execute minting for approved signals
  */
 
 import type { SignalStateManager } from './SignalStateManager.js';
-import type { ChallengeWindowManager } from './ChallengeWindowManager.js';
-import type { DisputeResolver } from './DisputeResolver.js';
 import type { MintExecutor } from './MintExecutor.js';
 import type { ValidatorConfig, ValidatorDecisionKind } from './types.js';
 import { DEFAULT_VALIDATOR_CONFIG } from './types.js';
@@ -66,13 +62,8 @@ export interface DaemonRunStats {
       rejected: number;
       errors: number;
     };
-    challengeWindows: {
-      opened: number;
+    finalization: {
       finalized: number;
-      errors: number;
-    };
-    disputes: {
-      resolved: number;
       errors: number;
     };
     minting: {
@@ -111,11 +102,10 @@ export class ConsoleDaemonLogger implements IDaemonLogger {
 /**
  * Validator Daemon
  * 
- * Orchestrates the complete appeal-based validation pipeline:
+ * Orchestrates the complete validation pipeline:
  * 1. Validator Decision: Auto-qualify/reject based on AFI scoring standards
- * 2. Challenge Window: Open windows for appeals
- * 3. Finalization: Close unchallenged windows, process disputes
- * 4. Execution: Mint approved signals, finalize rejections
+ * 2. Finalization: Seal decided signals (CHR-GOV D-CHR-2(3))
+ * 3. Execution: Mint approved signals, finalize rejections
  */
 export class ValidatorDaemon {
   private readonly config: ValidatorConfig;
@@ -125,8 +115,6 @@ export class ValidatorDaemon {
 
   constructor(
     private readonly stateManager: SignalStateManager,
-    private readonly windowManager: ChallengeWindowManager,
-    private readonly disputeResolver: DisputeResolver,
     private readonly mintExecutor: MintExecutor,
     private readonly scorer: IValidatorScorer,
     private readonly scoreFetcher: IAnalystScoreFetcher,
@@ -193,8 +181,7 @@ export class ValidatorDaemon {
       durationMs: 0,
       phases: {
         validatorDecisions: { processed: 0, qualified: 0, rejected: 0, errors: 0 },
-        challengeWindows: { opened: 0, finalized: 0, errors: 0 },
-        disputes: { resolved: 0, errors: 0 },
+        finalization: { finalized: 0, errors: 0 },
         minting: { minted: 0, rejected: 0, errors: 0 }
       },
       errors: []
@@ -211,44 +198,28 @@ export class ValidatorDaemon {
       this.logger.error(msg);
     }
 
-    // Phase 2: Open challenge windows for decided signals
+    // Phase 2: Finalize decided signals
     try {
-      const openResult = await this.windowManager.openPendingWindows();
-      stats.phases.challengeWindows.opened = openResult.opened;
-      stats.phases.challengeWindows.errors += openResult.errors.length;
-      openResult.errors.forEach(e => errors.push(`Window open error: ${e.error}`));
-      this.logger.info('Challenge windows opened', { opened: openResult.opened });
-    } catch (err) {
-      const msg = `Challenge window opening failed: ${err instanceof Error ? err.message : String(err)}`;
-      errors.push(msg);
-      this.logger.error(msg);
-    }
-
-    // Phase 3: Finalize unchallenged signals
-    try {
-      const finalizeResult = await this.windowManager.finalizeExpiredWindows();
-      stats.phases.challengeWindows.finalized = finalizeResult.finalized;
-      stats.phases.challengeWindows.errors += finalizeResult.errors.length;
-      finalizeResult.errors.forEach(e => errors.push(`Finalization error: ${e.error}`));
-      this.logger.info('Unchallenged signals finalized', { finalized: finalizeResult.finalized });
+      const ready = await this.stateManager.getReadyForFinalization();
+      let finalized = 0;
+      for (const signal of ready) {
+        try {
+          await this.stateManager.finalize(signal.signalId);
+          finalized += 1;
+        } catch (err) {
+          stats.phases.finalization.errors += 1;
+          errors.push(`Finalization error: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      stats.phases.finalization.finalized = finalized;
+      this.logger.info('Signals finalized', { finalized });
     } catch (err) {
       const msg = `Finalization failed: ${err instanceof Error ? err.message : String(err)}`;
       errors.push(msg);
       this.logger.error(msg);
     }
 
-    // Phase 4: Process dispute resolutions
-    try {
-      const disputeResult = await this.disputeResolver.processCompletedDisputes();
-      stats.phases.disputes = disputeResult;
-      this.logger.info('Disputes resolved', disputeResult);
-    } catch (err) {
-      const msg = `Dispute resolution failed: ${err instanceof Error ? err.message : String(err)}`;
-      errors.push(msg);
-      this.logger.error(msg);
-    }
-
-    // Phase 5: Execute minting and rejections
+    // Phase 3: Execute minting and rejections
     try {
       const mintResult = await this.mintExecutor.processReadySignals();
       stats.phases.minting = mintResult;

@@ -1,11 +1,10 @@
 # afi-mint — Agent Instructions ⚠️ HIGH RISK / CRITICAL
 
-**afi-mint** coordinates **signal-driven token minting and emissions scheduling** for AFI Protocol. This repo orchestrates the minting pipeline (signal validation, threshold checks, challenge windows, mint triggers) but **does NOT contain token contracts or on-chain economics logic**.
+**afi-mint** coordinates **signal-driven token minting and emissions scheduling** for AFI Protocol. This repo orchestrates the minting pipeline (signal validation, threshold checks, mint triggers) but **does NOT contain token contracts or on-chain economics logic**.
 
 **⚠️ CRITICAL**: This repo is **HIGH RISK** because incorrect minting coordination can cause:
 - Unauthorized token emissions
 - Incorrect supply cap enforcement
-- Failed challenge windows
 - Broken audit trails in the Mint Codex
 
 **Global Authority**: All agents operating in AFI Protocol repos must follow `afi-config/codex/governance/droids/AFI_DROID_CHARTER.v0.1.md`. If this AGENTS.md conflicts with the Charter, **the Charter wins**.
@@ -46,8 +45,6 @@ npm run validate:schemas
 # Simulate mint trigger (planned command – may be stubbed in this phase)
 npm run simulate-mint
 
-# Challenge a signal (CLI) (planned command – may be stubbed in this phase)
-npm run challenge-signal
 
 # Check threshold eligibility (planned command – may be stubbed in this phase)
 npm run check-threshold
@@ -66,8 +63,8 @@ npm run validate:receipts
 
 **Key directories**:
 - `mint/` — Core minting coordination logic (eligibility, mint triggers)
-- `cli/` — CLI commands (challenge signals, simulate mints)
-- `schemas/` — TypeScript schemas (ChallengeRecord, MintTrigger)
+- `cli/` — CLI commands (simulate mints)
+- `schemas/` — TypeScript schemas (MintTrigger, SignalValidatorState)
 - `codex/` — Mint receipt schemas (JSON)
 - `test/` — Unit tests for minting flows
 
@@ -106,7 +103,7 @@ Do not "fix" either by inventing values. Both are gated on governance that has n
 been filed. Full context: `reports/afi-dormant-surface-inventory-v0.1.md` §3.1.
 
 **Boundary with afi-token**:
-- `afi-mint` = minting **coordination** (off-chain logic, threshold checks, challenge windows)
+- `afi-mint` = minting **coordination** (off-chain logic, threshold checks, finalization)
 - `afi-token` = minting **execution** (on-chain contracts, supply caps, role management)
 
 **Boundary with afi-reactor**:
@@ -118,7 +115,6 @@ been filed. Full context: `reports/afi-dormant-surface-inventory-v0.1.md` §3.1.
 ## Security
 
 - **⚠️ Minting logic affects token supply**: Incorrect coordination can cause unauthorized emissions.
-- **⚠️ Challenge windows must be enforced**: Skipping challenges can allow invalid signals to mint tokens.
 - **⚠️ Threshold checks are critical**: Incorrect thresholds can over-mint or under-mint.
 - **All minting changes require tests**: 100% coverage for critical paths.
 - **No secrets in code**: Use environment variables for API keys and private keys.
@@ -148,9 +144,9 @@ been filed. Full context: `reports/afi-dormant-surface-inventory-v0.1.md` §3.1.
 ## Scope & Boundaries for Agents
 
 **Allowed**:
-- Add minting coordination logic in `mint/` (eligibility checks, threshold logic, challenge windows)
+- Add minting coordination logic in `mint/` (eligibility checks, threshold logic)
 - Add CLI commands in `cli/` for simulation and testing
-- Add schemas in `schemas/` for mint triggers and challenge records
+- Add schemas in `schemas/` for mint triggers
 - Add tests in `test/` for minting flows
 - Improve documentation in `docs/`
 - Add Mint Codex receipt schemas in `codex/`
@@ -161,7 +157,7 @@ been filed. Full context: `reports/afi-dormant-surface-inventory-v0.1.md` §3.1.
 - **Deploy contracts or broadcast transactions** (deployment is handled by `afi-token`)
 - **Add orchestration logic to `afi-reactor`** (signal orchestration is separate from minting coordination)
 - **Modify DAG structure or signal scoring** (those belong to `afi-reactor` and `afi-core`)
-- **Bypass challenge windows or threshold checks** (security-critical)
+- **Bypass threshold checks** (security-critical)
 - **Hardcode minting parameters** (use config from `afi-config` instead)
 - **Add cross-repo modifications** (no touching `afi-token`, `afi-reactor`, `afi-core`, etc.)
 
@@ -200,7 +196,7 @@ been filed. Full context: `reports/afi-dormant-surface-inventory-v0.1.md` §3.1.
 **TODO**: Define `mint-coordinator-droid` in `.factory/droids/mint-coordinator-droid.md` when minting goes live.
 
 **Expected responsibilities**:
-- Validate minting coordination logic (eligibility, thresholds, challenge windows)
+- Validate minting coordination logic (eligibility, thresholds)
 - Add tests for minting flows
 - Update Mint Codex schemas
 - Ensure minting parameters are sourced from `afi-config`, not hardcoded
@@ -215,7 +211,7 @@ been filed. Full context: `reports/afi-dormant-surface-inventory-v0.1.md` §3.1.
 ## Human Review & Escalation
 
 - **All minting changes require human review** before merge.
-- **HIGH RISK changes** (threshold logic, challenge windows, mint triggers) require explicit sign-off from @afi-mint-team and @afi-security-team.
+- **HIGH RISK changes** (threshold logic, mint triggers) require explicit sign-off from @afi-mint-team and @afi-security-team.
 - **Security audits required** for any changes affecting token supply or emissions logic.
 - **Prefer small, reversible changes** over large refactors.
 - **When in doubt, escalate** to @afi-mint-team or @afi-security-team.
