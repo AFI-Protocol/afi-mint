@@ -69,7 +69,6 @@ npm run validate:receipts
 - `cli/` — CLI commands (challenge signals, simulate mints)
 - `schemas/` — TypeScript schemas (ChallengeRecord, MintTrigger)
 - `codex/` — Mint receipt schemas (JSON)
-- `contracts/` — Solidity stubs (ChallengeRegistry, MintManager, ThresholdRules) **[PLACEHOLDER ONLY]**
 - `test/` — Unit tests for minting flows
 
 **Depends on**: afi-core (validators, schemas), afi-config (global config)  

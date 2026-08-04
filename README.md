@@ -26,7 +26,6 @@ This module is **Augmentcode + Factory-ready**, enabling autonomous agent deploy
 afi-mint/
 ├── cli/                 # CLI commands for signal challenge, mint triggers, simulation
 ├── codex/               # Mint receipt schema (JSON)
-├── contracts/           # Solidity stubs: ChallengeRegistry, MintManager, ThresholdRules
 ├── mint/                # Core TS minting logic and eligibility checks
 ├── schemas/             # TypeScript schemas for challenge and mint triggers
 ├── scripts/             # Scripted trigger examples

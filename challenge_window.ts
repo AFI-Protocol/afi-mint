@@ -1,1 +1,0 @@
-// Placeholder for challenge window mechanics.
