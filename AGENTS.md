@@ -71,8 +71,39 @@ npm run validate:receipts
 - `codex/` — Mint receipt schemas (JSON)
 - `test/` — Unit tests for minting flows
 
-**Depends on**: afi-core (validators, schemas), afi-config (global config)  
-**Consumed by**: afi-reactor (signal pipeline), afi-token (on-chain minting)
+**Intended dependencies**: afi-core (validators, schemas), afi-config (global config)  
+**Intended consumers**: afi-reactor (signal pipeline), afi-token (on-chain minting)
+
+> ⚠️ **Those two lines describe intent, not fact.** As of 2026-08-04 this repo has
+> **no import edge to any AFI repo and no consumer anywhere in the organization**
+> (verified org-wide). It also declares two npm dependencies that do not exist
+> (`@afi-protocol/afi-core`, `@afi-protocol/afi-infra`) and has no CI, so it does
+> not currently install or build. Treat everything here as a reserved design, not
+> as running code.
+
+### Status of the emissions path — what is missing (recorded 2026-08-04)
+
+`src/adapters/EmissionsMintDataProvider.ts` is the only tested code in this repo
+and its epoch-budget-proportional **structure is endorsed** by the accepted
+mint-formula decision (`mint-formula-bt-86b-alignment-v0.1:146` records it as
+"closer to this doctrine than a direct per-signal clamp formula"). It is **not** a
+rival emissions model. Two concrete gaps stand between it and settlement law:
+
+1. **The role-pool layer does not exist.** The accepted skeleton (BT-86b D3,
+   `:43`/`:76-79`) is: epoch budget from pinned `B(t)` → `AIM_t` → **role pools via
+   governed baseline role weights** → pro-rata by **verified credits**. This repo
+   implements the first step and then allocates per-signal by `Q·N·R`. The missing
+   layer's parameters are themselves ungoverned — BT-86b`:87` records that no
+   accepted decision defines the baseline role weights and `:163` lists choosing
+   their values as expressly non-authorized. This is CHAIN-GOV-adjacent work.
+2. **The three weight inputs have no producers.** `qualityScore`, `noveltyFactor`
+   and `reputationWeight` are produced by no code anywhere in the organization.
+   Their intended sources are three separately-dormant surfaces: the UWR score,
+   afi-core's `NoveltyScorer`, and the unsettled reputation model (afi-benchkit's
+   `R = α·PoI + β·PoInsight` vs. the doctrine's `Repₜ`).
+
+Do not "fix" either by inventing values. Both are gated on governance that has not
+been filed. Full context: `reports/afi-dormant-surface-inventory-v0.1.md` §3.1.
 
 **Boundary with afi-token**:
 - `afi-mint` = minting **coordination** (off-chain logic, threshold checks, challenge windows)

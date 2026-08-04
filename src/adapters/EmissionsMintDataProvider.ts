@@ -2,13 +2,54 @@
  * Emissions-Based Mint Data Provider
  *
  * Implements IMintDataProvider using the canonical AFI emissions schedule.
- * Calculates per-signal token amounts based on:
- * - Epoch emissions budget (from three-phase front-loaded schedule)
- * - Signal quality scores (decay score, novelty, reputation)
- * - Proportional distribution among qualified signals in the epoch
+ * Calculates per-signal token amounts from:
+ * - the epoch emissions budget (afi-math's pinned three-phase front-loaded
+ *   B(t) schedule — parity-tested against test/fixtures/emissions.golden.json)
+ * - a per-signal weight Q×N×R (quality, novelty, validator reputation)
+ * - that weight's proportional share of the epoch's REMAINING budget
  *
- * Based on the goldpaper formula:
- * ΔAFIᵢ = clamp(B(t) × Qᵢ × Nᵢ × R_val,i × E_epoch, 0.5×B(t), 2.0×B(t))
+ * Implemented formula (what this file actually computes):
+ *   ΔAFIᵢ = clamp(remainingBudget(epoch) × (Qᵢ·Nᵢ·Rᵢ / ΣW) × E_epoch,
+ *                 minTokensPerSignal, maxTokensPerSignal)
+ *
+ * NOT the per-signal clamp `ΔAFIᵢ = clamp(B(t) × Qᵢ × Nᵢ × R_val,i × E_epoch,
+ * 0.5×B(t), 2.0×B(t))` that earlier revisions of this docstring advertised:
+ * B(t) is consumed as the epoch BUDGET here, not as a per-signal multiplier
+ * (see the comment at the proportional-share step below). That superseded
+ * wording is the "inherited docstring drift" mint-formula-bt-86b-alignment-v0.1
+ * :146 flags for cleanup; it is corrected here rather than carried forward.
+ *
+ * ── STATUS: reserved, unwired, and INCOMPLETE (do not treat as settlement law)
+ *
+ * This provider has no runtime consumer anywhere in the organization, and two
+ * concrete gaps must close before it could become one. Recorded here because
+ * this is where a builder would look:
+ *
+ * 1. THE ROLE-POOL LAYER IS MISSING. The accepted skeleton
+ *    (mint-formula-bt-86b-alignment-v0.1 D3, :43 and :76-79) is four steps:
+ *      epoch budget from pinned B(t) → AIM_t (= 1 for v1)
+ *      → ROLE POOLS via governed baseline role weights
+ *      → pro-rata by VERIFIED CREDITS
+ *    This file implements step 1 and then allocates per-signal directly. There
+ *    is no role-pool routing, and the allocation unit is Q×N×R rather than
+ *    verified credits. Note the missing layer's parameters are themselves
+ *    ungoverned: BT-86b:87 records that no accepted decision defines the
+ *    baseline role weights, and :163 lists selecting their numeric values as
+ *    expressly non-authorized. Closing this gap is CHAIN-GOV-adjacent work,
+ *    not a local edit.
+ *
+ * 2. NONE OF THE THREE WEIGHT INPUTS HAS A PRODUCER. `qualityScore`,
+ *    `noveltyFactor` and `reputationWeight` (SignalMintMetadata below) are
+ *    produced by no code anywhere in the organization — verified org-wide.
+ *    Even fully wired, this formula could not be fed. Their intended sources
+ *    map onto three separately-dormant surfaces: the UWR score, afi-core's
+ *    NoveltyScorer, and the unsettled reputation model (afi-benchkit's
+ *    R = α·PoI + β·PoInsight vs. the doctrine's Repₜ).
+ *
+ * What IS sound and should survive: the afi-math schedule consumption and its
+ * golden-parity test, the epoch-budget-proportional STRUCTURE (BT-86b:146
+ * records it as closer to doctrine than a per-signal clamp), and the
+ * deterministic decimal truncation at the settlement boundary.
  */
 
 import { emissions, type EmissionsParams, type EmissionsSchedule } from '@afi-protocol/afi-math';
@@ -113,16 +154,24 @@ export class EmissionsMintDataProvider implements IMintDataProvider {
   }
 
   /**
-   * Calculate token amount for a signal using the goldpaper formula.
+   * Calculate the token amount for one signal as its weighted share of the
+   * epoch's remaining emissions budget.
    *
-   * Formula: ΔAFIᵢ = clamp(B(t) × Qᵢ × Nᵢ × R_val,i × E_epoch, min, max)
+   * Formula:
+   *   ΔAFIᵢ = clamp(remainingBudget × (Qᵢ·Nᵢ·Rᵢ / ΣW) × E_epoch, min, max)
    *
    * Where:
-   * - B(t) = base multiplier (decays conceptually but we use epoch budget)
-   * - Qᵢ = quality score (from decay score, 0-1)
-   * - Nᵢ = novelty factor (1.0 = baseline, higher for novel signals)
-   * - R_val,i = validator reputation weight (1.0 = baseline)
+   * - remainingBudget = B(t) epoch emission − already minted this epoch
+   *                     (B(t) is the epoch BUDGET, never a per-signal factor)
+   * - Qᵢ  = quality score (0-1)          ← no producer exists (header, gap 2)
+   * - Nᵢ  = novelty factor (1.0 baseline) ← no producer exists (header, gap 2)
+   * - Rᵢ  = validator reputation weight   ← no producer exists (header, gap 2)
+   * - ΣW  = total quality-weighted signals in the epoch
    * - E_epoch = Epoch Pulse policy factor (governance-controlled)
+   *
+   * The accepted skeleton routes the epoch budget through ROLE POOLS before
+   * per-recipient allocation, and allocates by verified credits rather than by
+   * Q·N·R; neither is implemented here (header, gap 1).
    */
   async calculateTokenAmount(signal: SignalValidatorState): Promise<bigint> {
     const metadata = await this.metadataFetcher.getMetadata(signal.signalId);
