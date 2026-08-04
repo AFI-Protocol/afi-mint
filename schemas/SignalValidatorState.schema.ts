@@ -5,7 +5,6 @@
  * Tracks signals through the validation pipeline.
  */
 import { z } from 'zod';
-import { VoteResultSchema } from './ChallengeRecord.schema.js';
 
 /**
  * Signal validator state kinds.
@@ -13,8 +12,6 @@ import { VoteResultSchema } from './ChallengeRecord.schema.js';
 export const SignalValidatorStateKindSchema = z.enum([
   'pending',
   'decay_pass',
-  'challenge_open',
-  'voting_complete',
   'minted',
   'rejected'
 ]);
@@ -30,10 +27,6 @@ export const SignalValidatorStateSchema = z.object({
   ageHours: z.number().min(0).optional().describe('Signal age in hours'),
   halfLifeHours: z.number().positive().optional().describe('Half-life used for decay'),
   decayPassAt: z.string().datetime().optional().describe('When signal passed decay threshold'),
-  snapshotProposalId: z.string().optional().describe('Snapshot proposal ID'),
-  challengeOpenedAt: z.string().datetime().optional().describe('When challenge window opened'),
-  challengeClosedAt: z.string().datetime().optional().describe('When challenge window closed'),
-  voteResult: VoteResultSchema.optional().describe('Vote results from Snapshot'),
   mintTxHash: z.string().optional().describe('Transaction hash of mint'),
   rejectionReason: z.string().optional().describe('Reason for rejection'),
   updatedAt: z.string().datetime().describe('Last update timestamp'),

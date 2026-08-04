@@ -307,32 +307,7 @@ export class SnapshotClient {
     return result.id as string;
   }
 
-  /**
-   * Check if a proposal exists for a given signal.
-   * Useful for preventing duplicate proposals.
-   */
-  async proposalExistsForSignal(spaceId: string, signalId: string): Promise<string | null> {
-    const query = `
-      query ProposalsForSignal($space: String!, $signalId: String!) {
-        proposals(
-          first: 1
-          where: {
-            space: $space
-            body_contains: $signalId
-          }
-        ) {
-          id
-        }
-      }
-    `;
 
-    const data = await this.graphql<{ proposals: Array<{ id: string }> }>(
-      query,
-      { space: spaceId, signalId }
-    );
-
-    return data.proposals[0]?.id ?? null;
-  }
 
   /**
    * Get the current block number for snapshot.

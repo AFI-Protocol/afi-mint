@@ -1,22 +1,19 @@
 /**
  * Signal State Manager
  * 
- * Manages signal state transitions through the appeal-based validator pipeline.
+ * Manages signal state transitions through the validator pipeline.
  * 
  * DESIGN:
  * - Validator makes automatic decision (qualified/rejected) based on AFI standards
- * - Challenge window opens for appeals
- * - If unchallenged: auto-finalize based on original decision
- * - If challenged: dispute resolution via voting, then finalize
+ * - Determinations are mechanically verifiable; there is no appeal or dispute
+ *   process (the challenge layer was retired by CHR-GOV D-CHR-1)
+ * - Finalization follows qualification once the maturity hold has elapsed
  */
 
 import type {
   SignalValidatorState,
   SignalValidatorStateKind,
-  ValidatorDecisionKind,
-  ChallengeSubmission,
-  DisputeOutcome,
-  VoteResult
+  ValidatorDecisionKind
 } from './types.js';
 
 /**
@@ -31,21 +28,14 @@ export interface StateTransitionEvent {
 }
 
 /**
- * Valid state transitions in the appeal-based validator pipeline.
+ * Valid state transitions in the validator pipeline.
  * 
- * Happy path (no challenge):
- *   pending → qualified/rejected → challenge_window → finalized → minted/rejected_final
- * 
- * Contested path:
- *   challenge_window → contested → dispute_resolved → minted/rejected_final
+ *   pending → qualified/rejected → finalized → minted/rejected_final
  */
 const VALID_TRANSITIONS: Record<SignalValidatorStateKind, SignalValidatorStateKind[]> = {
   pending: ['qualified', 'rejected'],
-  qualified: ['challenge_window'],
-  rejected: ['challenge_window'],
-  challenge_window: ['finalized', 'contested'], // finalized if unchallenged, contested if challenged
-  contested: ['dispute_resolved'],
-  dispute_resolved: ['minted', 'rejected_final'],
+  qualified: ['finalized'],
+  rejected: ['finalized'],
   finalized: ['minted', 'rejected_final'],
   minted: [], // Terminal state
   rejected_final: [] // Terminal state
@@ -130,7 +120,6 @@ export class SignalStateManager {
       signalId,
       state: 'pending',
       baseScore,
-      wasChallenged: false,
       createdAt: now,
       updatedAt: now
     };
@@ -182,117 +171,17 @@ export class SignalStateManager {
     });
   }
 
-  // ==================== CHALLENGE WINDOW ====================
+  // ==================== FINALIZATION ====================
 
   /**
-   * Open the challenge window for a signal.
+   * Finalize a signal after its decision (CHR-GOV D-CHR-2(3): qualification
+   * complete and the maturity hold elapsed).
    */
-  async openChallengeWindow(
-    signalId: string,
-    windowDurationHours: number
-  ): Promise<SignalValidatorState> {
-    const now = new Date();
-    const closesAt = new Date(now.getTime() + windowDurationHours * 60 * 60 * 1000);
-
-    return this.transition(signalId, 'challenge_window', {
-      challengeWindowOpenedAt: now.toISOString(),
-      challengeWindowClosesAt: closesAt.toISOString()
-    });
-  }
-
-  /**
-   * Submit a challenge (contest the validator decision).
-   */
-  async submitChallenge(
-    signalId: string,
-    challenge: ChallengeSubmission
-  ): Promise<SignalValidatorState> {
+  async finalize(signalId: string): Promise<SignalValidatorState> {
     const state = await this.store.get(signalId);
-    if (!state) {
-      throw new Error(`Signal ${signalId} not found`);
-    }
-
-    if (state.state !== 'challenge_window') {
-      throw new Error(`Signal ${signalId} is in state ${state.state}, can only challenge during challenge_window`);
-    }
-
-    // Check if challenge window is still open
-    if (state.challengeWindowClosesAt) {
-      const closesAt = new Date(state.challengeWindowClosesAt).getTime();
-      if (Date.now() > closesAt) {
-        throw new Error(`Challenge window for ${signalId} has closed`);
-      }
-    }
-
-    return this.transition(signalId, 'contested', {
-      challenge,
-      wasChallenged: true
-    });
-  }
-
-  /**
-   * Finalize an unchallenged signal (challenge window closed without contest).
-   */
-  async finalizeUnchallenged(signalId: string): Promise<SignalValidatorState> {
-    const state = await this.store.get(signalId);
-    if (!state) {
-      throw new Error(`Signal ${signalId} not found`);
-    }
-
-    if (state.state !== 'challenge_window') {
-      throw new Error(`Signal ${signalId} is in state ${state.state}, expected challenge_window`);
-    }
-
-    if (state.wasChallenged) {
-      throw new Error(`Signal ${signalId} was challenged, cannot finalize as unchallenged`);
-    }
-
-    // Set final decision based on original validator decision
+    if (!state) throw new Error(`Signal not found: ${signalId}`);
     const finalDecision = state.validatorDecision === 'qualified' ? 'mint' : 'reject';
-
-    return this.transition(signalId, 'finalized', {
-      finalDecision
-    });
-  }
-
-  // ==================== DISPUTE RESOLUTION ====================
-
-  /**
-   * Record dispute outcome after voting completes.
-   */
-  async recordDisputeOutcome(
-    signalId: string,
-    voteResult: VoteResult,
-    challengeSucceeded: boolean
-  ): Promise<SignalValidatorState> {
-    const state = await this.store.get(signalId);
-    if (!state) {
-      throw new Error(`Signal ${signalId} not found`);
-    }
-
-    const disputeOutcome: DisputeOutcome = {
-      challengeSucceeded,
-      voteResult,
-      resolvedAt: new Date().toISOString(),
-      challengerRewarded: challengeSucceeded
-    };
-
-    // Determine final decision:
-    // - If challenge succeeded: OVERTURN original decision
-    // - If challenge failed: UPHOLD original decision
-    let finalDecision: 'mint' | 'reject';
-    if (challengeSucceeded) {
-      // Overturn: qualified → reject, rejected → mint
-      finalDecision = state.validatorDecision === 'qualified' ? 'reject' : 'mint';
-    } else {
-      // Uphold: qualified → mint, rejected → reject
-      finalDecision = state.validatorDecision === 'qualified' ? 'mint' : 'reject';
-    }
-
-    return this.transition(signalId, 'dispute_resolved', {
-      disputeOutcome,
-      finalDecision
-    });
+    return this.transition(signalId, 'finalized', { finalDecision });
   }
 
   // ==================== FINALIZATION ====================
@@ -330,60 +219,29 @@ export class SignalStateManager {
   }
 
   /**
-   * Get signals awaiting challenge window opening.
+   * Get signals ready for finalization (decided; the maturity hold governs
+   * when finalization may proceed — CHR-GOV D-CHR-2(3)).
    */
-  async getAwaitingChallengeWindow(): Promise<SignalValidatorState[]> {
+  async getReadyForFinalization(): Promise<SignalValidatorState[]> {
     const qualified = await this.store.listByState('qualified');
     const rejected = await this.store.listByState('rejected');
     return [...qualified, ...rejected];
   }
 
   /**
-   * Get signals in challenge window.
-   */
-  async getInChallengeWindow(): Promise<SignalValidatorState[]> {
-    return this.store.listByState('challenge_window');
-  }
-
-  /**
-   * Get signals with active disputes.
-   */
-  async getContestedSignals(): Promise<SignalValidatorState[]> {
-    return this.store.listByState('contested');
-  }
-
-  /**
-   * Get signals ready for finalization (unchallenged, window closed).
-   */
-  async getReadyForFinalization(): Promise<SignalValidatorState[]> {
-    const inWindow = await this.store.listByState('challenge_window');
-    const now = Date.now();
-    
-    return inWindow.filter(s => {
-      if (s.wasChallenged) return false;
-      if (!s.challengeWindowClosesAt) return false;
-      return now >= new Date(s.challengeWindowClosesAt).getTime();
-    });
-  }
-
-  /**
-   * Get signals ready for minting (finalized or dispute resolved with mint decision).
+   * Get signals ready for minting (finalized with a mint decision).
    */
   async getReadyForMinting(): Promise<SignalValidatorState[]> {
     const finalized = await this.store.listByState('finalized');
-    const disputeResolved = await this.store.listByState('dispute_resolved');
-    
-    return [...finalized, ...disputeResolved].filter(s => s.finalDecision === 'mint');
+    return finalized.filter(s => s.finalDecision === 'mint');
   }
 
   /**
-   * Get signals ready for rejection (finalized or dispute resolved with reject decision).
+   * Get signals ready for rejection (finalized with a reject decision).
    */
   async getReadyForRejection(): Promise<SignalValidatorState[]> {
     const finalized = await this.store.listByState('finalized');
-    const disputeResolved = await this.store.listByState('dispute_resolved');
-    
-    return [...finalized, ...disputeResolved].filter(s => s.finalDecision === 'reject');
+    return finalized.filter(s => s.finalDecision === 'reject');
   }
 
   // ==================== INTERNAL ====================

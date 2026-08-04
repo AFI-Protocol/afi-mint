@@ -2,7 +2,7 @@
  * Mint Executor
  * 
  * Executes final minting and rejection for signals that have completed
- * the validation pipeline (either unchallenged or dispute-resolved).
+ * the validation pipeline.
  * 
  * DESIGN:
  * - Processes signals with finalDecision = 'mint' → mint tokens
@@ -122,9 +122,7 @@ export class MintExecutor {
   async executeRejection(signal: SignalValidatorState): Promise<{
     success: boolean;
   }> {
-    const reason = signal.wasChallenged && signal.disputeOutcome?.challengeSucceeded
-      ? 'Rejected after successful challenge'
-      : signal.decisionReason ?? 'Did not meet scoring threshold';
+    const reason = signal.decisionReason ?? 'Did not meet scoring threshold';
 
     await this.stateManager.markRejectedFinal(signal.signalId, reason);
     return { success: true };

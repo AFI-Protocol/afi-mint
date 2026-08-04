@@ -5,13 +5,6 @@
  */
 
 export {
-  VoteResultSchema,
-  ChallengeRecordSchema,
-  type VoteResult,
-  type ChallengeRecord
-} from './ChallengeRecord.schema.js';
-
-export {
   MintRequestSchema,
   MintTriggerSchema,
   type MintRequest,
