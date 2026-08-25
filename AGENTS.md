@@ -96,8 +96,13 @@ rival emissions model. Two concrete gaps stand between it and settlement law:
 2. **The three weight inputs have no producers.** `qualityScore`, `noveltyFactor`
    and `reputationWeight` are produced by no code anywhere in the organization.
    Their intended sources are three separately-dormant surfaces: the UWR score,
-   afi-core's `NoveltyScorer`, and the unsettled reputation model (afi-benchkit's
-   `R = α·PoI + β·PoInsight` vs. the doctrine's `Repₜ`).
+   afi-core's `NoveltyScorer`, and the reserved reputation primitives PoI and
+   PoInsight (D-CONST-5; their formula, weighting and the `Repₜ` composite are
+   reserved to a future CHAIN-GOV act). Their per-analyst off-chain input is the
+   CAL-GOV analyst calibration record (`afi.analyst-calibration.v1`,
+   afi-governance PR #53); projecting it into `reputationWeight` is itself a
+   CHAIN-GOV act (D-CAL-5(3)). afi-benchkit's ungoverned `R = α·PoI + β·PoInsight`
+   was research tooling, retired under CAL-GOV D-CAL-6 — the primitives are not.
 
 Do not "fix" either by inventing values. Both are gated on governance that has not
 been filed. Full context: `reports/afi-dormant-surface-inventory-v0.1.md` §3.1.

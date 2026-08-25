@@ -43,8 +43,14 @@
  *    produced by no code anywhere in the organization — verified org-wide.
  *    Even fully wired, this formula could not be fed. Their intended sources
  *    map onto three separately-dormant surfaces: the UWR score, afi-core's
- *    NoveltyScorer, and the unsettled reputation model (afi-benchkit's
- *    R = α·PoI + β·PoInsight vs. the doctrine's Repₜ).
+ *    NoveltyScorer, and the reserved reputation primitives PoI and PoInsight
+ *    (D-CONST-5; their formula, weighting and the Repₜ composite are reserved
+ *    to a future CHAIN-GOV act). Their per-analyst off-chain input is the
+ *    CAL-GOV analyst calibration record (afi.analyst-calibration.v1,
+ *    afi-governance PR #53); projecting it into reputationWeight is itself a
+ *    CHAIN-GOV act (D-CAL-5(3)). afi-benchkit's ungoverned
+ *    R = α·PoI + β·PoInsight was research tooling, retired under CAL-GOV
+ *    D-CAL-6 — the primitives are not.
  *
  * What IS sound and should survive: the afi-math schedule consumption and its
  * golden-parity test, the epoch-budget-proportional STRUCTURE (BT-86b:146
